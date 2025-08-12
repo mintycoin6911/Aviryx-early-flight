@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Aviryx — Aurora Leaderboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg:#0E1117; --fg:#fff; --mut:#b6c1d1; --line:rgba(255,255,255,.12); --pill:rgba(255,255,255,.18); --link:#7DF9FF; }
+    body{background:var(--bg);color:var(--fg);font-family:-apple-system,Segoe UI,Roboto,Inter,Arial;margin:0}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 24px}
+    .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;background:rgba(255,255,255,.02)}
+    h1,h2{margin:.2em 0}
+    a{color:var(--link);text-decoration:none}
+    .badge{border:1px solid var(--pill);border-radius:999px;padding:6px 12px;display:inline-block}
+    .grid{display:grid;grid-template-columns: 1fr 1fr; gap:14px;}
+    .mut{color:var(--mut)}
+    .row{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+    .tiers img{height:96px;border-radius:10px}
+    .top { border-color: rgba(235,180,170,.6); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🪽 Aviryx — Early Flight</h1>
+
+  <!-- Links header -->
+  <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+    <div style="font-weight:700;font-size:18px">Aurora Skywyrm Leaderboard</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="badge" href="https://t.me/AviryxNest" target="_blank" rel="noopener">Telegram</a>
+      <a class="badge" href="https://x.com/AviryxCoin" target="_blank" rel="noopener">X (Twitter)</a>
+      <a class="badge" href="#" id="buyLink" target="_blank" rel="noopener">Buy on Pump.fun (soon)</a>
+    </div>
+  </div>
+
+  <!-- Dates -->
+  <div class="card">
+    <div class="mut">Event window (UTC):</div>
+    <p id="dates" style="margin:.4em 0; font-family: ui-monospace,Consolas,Menlo,monospace;"></p>
+    <small class="mut">Set your launch date in the small script at the bottom of this file.</small>
+  </div>
+
+  <!-- Shiny Champion -->
+  <div class="card top">
+    <h2>🌟 Aurora Champion — Shiny Celestial (1 of 1)</h2>
+    <div class="mut" style="margin-bottom:8px">Awarded to #1 holder at the end of Early Flight</div>
+    <img onerror="this.style.display='none'" src="../../aurora_cards/static/aurora_shiny_celestial.png" alt="Shiny Celestial">
+  </div>
+
+  <!-- Live standings -->
+  <div class="card">
+    <h2>Live Standings</h2>
+    <div id="rows" class="rows"></div>
+    <div class="mut" id="emptyNote" style="display:none">No data yet — once your bot writes to <code>community_tools/aurora/holders.json</code>, standings will appear here.</div>
+  </div>
+</div>
+
+<script>
+// ====== SET THESE ======
+// 1) Launch date (UTC). Example: "2025-09-01T00:00:00Z"
+const LAUNCH_UTC = "YYYY-MM-DDT00:00:00Z"; // <-- change this when you know the date
+
+// 2) Pump.fun link (once live). Example: "https://pump.fun/coin/xxxxxxxx"
+const PUMPFUN_URL = ""; // leave blank until launch
+
+// =======================
+if (PUMPFUN_URL) {
+  const a = document.getElementById('buyLink');
+  a.href = PUMPFUN_URL;
+  a.textContent = "Buy on Pump.fun";
+}
+
+// Compute +14 days window
+(function() {
+  try {
+    const start = new Date(LAUNCH_UTC);
+    const end = new Date(start.getTime() + 14*24*60*60*1000);
+    const fmt = d => d.toISOString().replace('.000Z','Z');
+    const el = document.getElementById('dates');
+    if (String(start) !== "Invalid Date") {
+      el.textContent = fmt(start) + " → " + fmt(end);
+    } else {
+      el.textContent = "Set LAUNCH_UTC (e.g., 2025-09-01T00:00:00Z)";
+    }
+  } catch(e) {
+    document.getElementById('dates').textContent = "Set LAUNCH_UTC (e.g., 2025-09-01T00:00:00Z)";
+  }
+})();
+
+// Load holders (if file exists in same repo path)
+(async function() {
+  const target = document.getElementById('rows');
+  const emptyNote = document.getElementById('emptyNote');
+  try {
+    const res = await fetch('../../community_tools/aurora/holders.json', { cache:'no-cache' });
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) { emptyNote.style.display='block'; return; }
+    data.sort((a,b)=> (b.highest_balance||0) - (a.highest_balance||0));
+    target.innerHTML = data.slice(0,100).map((u,i)=>`
+      <div class="row">
+        <div class="grid">
+          <div>
+            <div class="badge">#${i+1}</div>
+            <div style="font-weight:700">${u.handle || u.wallet || '—'}</div>
+            <div class="mut">Peak: ${u.highest_balance||0} AVX</div>
+          </div>
+          <div style="text-align:right" class="tiers">
+            <div>${u.tier || '—'}</div>
+            ${u.tier_index ? `<img onerror="this.style.display='none'" src='../../aurora_cards/static/aurora_tier${u.tier_index}.png' alt='Tier'>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    emptyNote.style.display='block';
+  }
+})();
+</script>
+</body>
+</html>
